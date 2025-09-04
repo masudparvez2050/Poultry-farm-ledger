@@ -5,17 +5,28 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "server": "node server/index.cjs",
+    "migrate": "node server/migrate.cjs",
+    "dev:fullstack": "concurrently \"npm run server\" \"npm run dev\"",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy": "vercel --prod",
+    "vercel-build": "npm run build"
   },
   "dependencies": {
-    "react-dom": "^19.1.1",
     "@google/genai": "^1.17.0",
+    "@types/cors": "^2.8.19",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.2",
+    "express": "^5.1.0",
+    "mongoose": "^8.18.0",
     "react": "^19.1.1",
+    "react-dom": "^19.1.1",
     "recharts": "^3.1.2"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
+    "concurrently": "^9.2.1",
     "typescript": "~5.8.2",
     "vite": "^6.2.0"
   }

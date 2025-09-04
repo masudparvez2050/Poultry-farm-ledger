@@ -1,121 +1,120 @@
 import type { DeliveryRecord, NewRecordData } from '../types';
 
-const STORAGE_KEY = 'deliveryRecords';
+// API Base URL from environment variable
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001/api';
 
-// =======================================================================================
-// MOCK DATABASE (using localStorage)
-// In a real application, you would remove this section and the functions below would
-// use `fetch` to call your backend API, which would then talk to your MongoDB database.
-// =======================================================================================
-
-const getStoredRecords = (): DeliveryRecord[] => {
-  try {
-    const item = window.localStorage.getItem(STORAGE_KEY);
-    return item ? JSON.parse(item) : [];
-  } catch (error) {
-    console.error("Error reading from localStorage", error);
-    return [];
+// Helper function to handle API responses
+const handleResponse = async (response: Response) => {
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+    throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
   }
+  return response.json();
 };
 
-const saveStoredRecords = (records: DeliveryRecord[]) => {
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
-  } catch (error) {
-    console.error("Error writing to localStorage", error);
-  }
-};
-
-// =======================================================================================
-// API SERVICE FUNCTIONS
-// These functions mimic what you'd have if you were calling a real backend API.
-// =======================================================================================
-
+// Helper function to add delay for better UX (simulate network delay)
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 /**
- * Fetches all records from the database.
+ * Fetches all records from the MongoDB database.
  * @returns A promise that resolves to an array of delivery records.
  */
 export const getRecords = async (): Promise<DeliveryRecord[]> => {
-  console.log("API: Fetching records...");
-  // Simulate network delay to mimic a real API call
-  await new Promise(res => setTimeout(res, 300));
-  const records = getStoredRecords();
-  // In a real app, sorting would ideally be done on the backend/database query
-  return records.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  console.log("API: Fetching records from MongoDB...");
+  await delay(300); // Simulate network delay
+  
+  try {
+    const response = await fetch(`${API_BASE_URL}/records`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+    
+    return await handleResponse(response);
+  } catch (error) {
+    console.error('Error fetching records:', error);
+    throw error;
+  }
 };
 
 /**
- * Adds a new record to the database.
+ * Adds a new record to the MongoDB database.
  * @param newRecordData The data for the new record.
  * @returns A promise that resolves to the newly created record.
  */
 export const addRecord = async (newRecordData: NewRecordData): Promise<DeliveryRecord> => {
-    console.log("API: Adding new record...", newRecordData);
-    await new Promise(res => setTimeout(res, 300));
+  console.log("API: Adding new record to MongoDB...", newRecordData);
+  await delay(300); // Simulate network delay
 
-    // Calculation logic is now centralized here, could also be on the backend
-    const entryCount = newRecordData.weights.length;
-    const grossWeight = newRecordData.weights.reduce((sum, w) => sum + w, 0);
-    const totalBuckleWeight = (newRecordData.buckleNumber || 0) * (newRecordData.buckleWeight || 0);
-    const netWeight = grossWeight - totalBuckleWeight;
-    const averageWeight = entryCount > 0 ? netWeight / entryCount : 0;
+  try {
+    const response = await fetch(`${API_BASE_URL}/records`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(newRecordData),
+    });
 
-    const newRecord: DeliveryRecord = {
-      id: `rec-${Date.now()}`,
-      ...newRecordData,
-      entryCount,
-      grossWeight,
-      totalBuckleWeight,
-      netWeight,
-      averageWeight,
-    };
-
-    const records = getStoredRecords();
-    saveStoredRecords([newRecord, ...records]);
-    return newRecord;
+    return await handleResponse(response);
+  } catch (error) {
+    console.error('Error creating record:', error);
+    throw error;
+  }
 };
 
 /**
- * Updates an existing record in the database.
+ * Updates an existing record in the MongoDB database.
  * @param updatedRecordData The full record object with updated data.
  * @returns A promise that resolves to the updated record.
  */
 export const updateRecord = async (updatedRecordData: DeliveryRecord): Promise<DeliveryRecord> => {
-    console.log("API: Updating record...", updatedRecordData);
-    await new Promise(res => setTimeout(res, 300));
-    
-    // Recalculate all derived fields upon update
-    const entryCount = updatedRecordData.weights.length;
-    const grossWeight = updatedRecordData.weights.reduce((sum, w) => sum + w, 0);
-    const totalBuckleWeight = (updatedRecordData.buckleNumber || 0) * (updatedRecordData.buckleWeight || 0);
-    const netWeight = grossWeight - totalBuckleWeight;
-    const averageWeight = entryCount > 0 ? netWeight / entryCount : 0;
-    
-    const finalRecord: DeliveryRecord = {
-        ...updatedRecordData,
-        entryCount,
-        grossWeight,
-        totalBuckleWeight,
-        netWeight,
-        averageWeight,
-    };
+  console.log("API: Updating record in MongoDB...", updatedRecordData);
+  await delay(300); // Simulate network delay
+  
+  try {
+    const response = await fetch(`${API_BASE_URL}/records/${updatedRecordData._id || updatedRecordData.id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        date: updatedRecordData.date,
+        truckId: updatedRecordData.truckId,
+        invoiceNo: updatedRecordData.invoiceNo,
+        weights: updatedRecordData.weights,
+        buckleNumber: updatedRecordData.buckleNumber,
+        buckleWeight: updatedRecordData.buckleWeight,
+      }),
+    });
 
-    let records = getStoredRecords();
-    records = records.map(r => r.id === finalRecord.id ? finalRecord : r);
-    saveStoredRecords(records);
-    return finalRecord;
+    return await handleResponse(response);
+  } catch (error) {
+    console.error('Error updating record:', error);
+    throw error;
+  }
 };
 
 /**
- * Deletes a record from the database.
+ * Deletes a record from the MongoDB database.
  * @param id The ID of the record to delete.
  * @returns A promise that resolves when the operation is complete.
  */
 export const deleteRecord = async (id: string): Promise<void> => {
-    console.log(`API: Deleting record ${id}...`);
-    await new Promise(res => setTimeout(res, 300));
-    let records = getStoredRecords();
-    records = records.filter(record => record.id !== id);
-    saveStoredRecords(records);
+  console.log(`API: Deleting record ${id} from MongoDB...`);
+  await delay(300); // Simulate network delay
+  
+  try {
+    const response = await fetch(`${API_BASE_URL}/records/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    await handleResponse(response);
+  } catch (error) {
+    console.error('Error deleting record:', error);
+    throw error;
+  }
 };
