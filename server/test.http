@@ -1,0 +1,39 @@
+### Health Check
+GET http://localhost:3000/health
+
+###
+
+### API Health Check
+GET http://localhost:3000/api/v1/health
+
+###
+
+### Get all records
+GET http://localhost:3000/api/v1/records
+
+###
+
+### Create new record
+POST http://localhost:3000/api/v1/records
+Content-Type: application/json
+
+{
+  "date": "2025-09-04",
+  "truckId": "TR001",
+  "invoiceNo": "INV001",
+  "weights": [45.5, 42.3, 48.1],
+  "buckleNumber": 3,
+  "buckleWeight": 0.5
+}
+
+###
+
+### Get statistics
+GET http://localhost:3000/api/v1/records/stats
+
+###
+
+### Get records with pagination
+GET http://localhost:3000/api/v1/records?page=1&limit=10&sortBy=date&sortOrder=desc
+
+###

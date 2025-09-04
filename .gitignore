@@ -7,22 +7,10 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-# Dependencies
 node_modules
 dist
 dist-ssr
 *.local
-
-# Environment variables
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
-# Build outputs
-build/
-.vercel/
 
 # Editor directories and files
 .vscode/*
@@ -34,16 +22,3 @@ build/
 *.njsproj
 *.sln
 *.sw?
-
-# Cache and temporary files
-.cache/
-.npm
-.eslintcache
-tmp/
-temp/
-
-# Database files
-*.db
-*.sqlite
-*.sqlite3
-data/

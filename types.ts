@@ -1,8 +1,7 @@
-export type NewRecordData = Omit<DeliveryRecord, 'id' | '_id' | 'grossWeight' | 'totalBuckleWeight' | 'netWeight' | 'averageWeight' | 'entryCount'>;
+export type NewRecordData = Omit<DeliveryRecord, 'id' | 'grossWeight' | 'totalBuckleWeight' | 'netWeight' | 'averageWeight' | 'entryCount'>;
 
 export interface DeliveryRecord {
-  id?: string; // Made optional for backward compatibility
-  _id?: string; // MongoDB ObjectId
+  id: string;
   date: string;
   truckId: string;
   invoiceNo: string;
