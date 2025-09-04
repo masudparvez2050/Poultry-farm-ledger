@@ -1,3 +1,7 @@
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
+
 // Error handling middleware
 export const errorHandler = (err, req, res, next) => {
   console.error("Error:", err);

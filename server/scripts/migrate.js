@@ -1,6 +1,9 @@
 import { DeliveryRecord } from "../server/src/models/index.js";
 import connectDB from "../server/src/config/database.js";
 import dotenv from "dotenv";
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
 
 // Load environment variables
 dotenv.config({ path: "../server/.env" });
