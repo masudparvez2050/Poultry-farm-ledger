@@ -42,27 +42,23 @@ const deliveryRecordSchema = new mongoose.Schema(
     // Calculated fields
     grossWeight: {
       type: Number,
-      required: true,
-      min: 0,
+      default: 0,
     },
     totalBuckleWeight: {
       type: Number,
-      required: true,
-      min: 0,
+      default: 0,
     },
     netWeight: {
       type: Number,
-      required: true,
+      default: 0,
     },
     averageWeight: {
       type: Number,
-      required: true,
-      min: 0,
+      default: 0,
     },
     entryCount: {
       type: Number,
-      required: true,
-      min: 1,
+      default: 1,
     },
   },
   {

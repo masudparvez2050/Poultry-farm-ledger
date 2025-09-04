@@ -100,7 +100,25 @@ export const createRecord = async (req, res) => {
       });
     }
 
-    const record = await DeliveryRecord.create(req.body);
+    // Calculate derived fields
+    const { weights, buckleNumber = 0, buckleWeight = 0 } = req.body;
+    const entryCount = weights?.length || 0;
+    const grossWeight = weights?.reduce((sum, weight) => sum + weight, 0) || 0;
+    const totalBuckleWeight = buckleNumber * buckleWeight;
+    const netWeight = grossWeight - totalBuckleWeight;
+    const averageWeight = entryCount > 0 ? netWeight / entryCount : 0;
+
+    // Create record with calculated fields
+    const recordData = {
+      ...req.body,
+      entryCount,
+      grossWeight,
+      totalBuckleWeight,
+      netWeight,
+      averageWeight,
+    };
+
+    const record = await DeliveryRecord.create(recordData);
 
     res.status(201).json({
       success: true,
@@ -154,9 +172,31 @@ export const updateRecord = async (req, res) => {
       });
     }
 
+    // Calculate derived fields if weights are being updated
+    let updateData = { ...req.body };
+
+    if (req.body.weights) {
+      const { weights, buckleNumber = 0, buckleWeight = 0 } = req.body;
+      const entryCount = weights?.length || 0;
+      const grossWeight =
+        weights?.reduce((sum, weight) => sum + weight, 0) || 0;
+      const totalBuckleWeight = buckleNumber * buckleWeight;
+      const netWeight = grossWeight - totalBuckleWeight;
+      const averageWeight = entryCount > 0 ? netWeight / entryCount : 0;
+
+      updateData = {
+        ...updateData,
+        entryCount,
+        grossWeight,
+        totalBuckleWeight,
+        netWeight,
+        averageWeight,
+      };
+    }
+
     const record = await DeliveryRecord.findByIdAndUpdate(
       req.params.id,
-      req.body,
+      updateData,
       {
         new: true,
         runValidators: true,
