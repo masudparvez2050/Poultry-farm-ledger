@@ -1,0 +1,5 @@
+{
+  "name": "Poultry Farm Ledger",
+  "description": "A web application for poultry farms to digitally record and analyze daily truck-wise poultry weight data, replacing manual paper-based systems. It features data entry, storage, and a dashboard for report generation and analysis, including an AI-powered feature to extract weight data from images of paper records.",
+  "requestFramePermissions": []
+}
