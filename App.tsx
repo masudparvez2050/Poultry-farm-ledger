@@ -1,62 +1,53 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { Header } from './components/Header';
 import { Dashboard } from './components/Dashboard';
 import { AddRecordModal } from './components/AddRecordModal';
-import { PlusIcon } from './components/Icons';
-import { useLocalStorage } from './hooks/useLocalStorage';
+import { PlusIcon, Spinner } from './components/Icons';
+import * as apiService from './services/apiService';
 import type { DeliveryRecord, NewRecordData } from './types';
 
 const App: React.FC = () => {
-  const [records, setRecords] = useLocalStorage<DeliveryRecord[]>('deliveryRecords', []);
+  const [records, setRecords] = useState<DeliveryRecord[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<DeliveryRecord | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const addRecord = useCallback((newRecordData: NewRecordData) => {
-    const entryCount = newRecordData.weights.length;
-    const grossWeight = newRecordData.weights.reduce((sum, w) => sum + w, 0);
-    const totalBuckleWeight = (newRecordData.buckleNumber || 0) * (newRecordData.buckleWeight || 0);
-    const netWeight = grossWeight - totalBuckleWeight;
-    const averageWeight = entryCount > 0 ? netWeight / entryCount : 0;
+  const fetchRecords = useCallback(async () => {
+    setIsLoading(true);
+    try {
+        const fetchedRecords = await apiService.getRecords();
+        setRecords(fetchedRecords);
+    } catch (error) {
+        console.error("Failed to fetch records:", error);
+        // You could set an error state here to show a message in the UI
+    } finally {
+        setIsLoading(false);
+    }
+  }, []);
 
-    const newRecord: DeliveryRecord = {
-      id: `rec-${Date.now()}`,
-      ...newRecordData,
-      entryCount,
-      grossWeight,
-      totalBuckleWeight,
-      netWeight,
-      averageWeight,
-    };
+  useEffect(() => {
+    fetchRecords();
+  }, [fetchRecords]);
 
-    setRecords(prevRecords => [newRecord, ...prevRecords]);
+
+  const addRecord = useCallback(async (newRecordData: NewRecordData) => {
+    await apiService.addRecord(newRecordData);
     setIsModalOpen(false);
-  }, [setRecords]);
+    await fetchRecords(); // Refetch to get the latest data, including the new record
+  }, [fetchRecords]);
 
-  const updateRecord = useCallback((updatedRecord: DeliveryRecord) => {
-    const entryCount = updatedRecord.weights.length;
-    const grossWeight = updatedRecord.weights.reduce((sum, w) => sum + w, 0);
-    const totalBuckleWeight = (updatedRecord.buckleNumber || 0) * (updatedRecord.buckleWeight || 0);
-    const netWeight = grossWeight - totalBuckleWeight;
-    const averageWeight = entryCount > 0 ? netWeight / entryCount : 0;
-    
-    const finalRecord: DeliveryRecord = {
-        ...updatedRecord,
-        entryCount,
-        grossWeight,
-        totalBuckleWeight,
-        netWeight,
-        averageWeight,
-    };
-
-    setRecords(prevRecords => prevRecords.map(r => r.id === finalRecord.id ? finalRecord : r));
+  const updateRecord = useCallback(async (updatedRecord: DeliveryRecord) => {
+    await apiService.updateRecord(updatedRecord);
     setEditingRecord(null);
     setIsModalOpen(false);
-  }, [setRecords]);
+    await fetchRecords(); // Refetch to reflect the update
+  }, [fetchRecords]);
 
 
-  const deleteRecord = useCallback((id: string) => {
-    setRecords(prevRecords => prevRecords.filter(record => record.id !== id));
-  }, [setRecords]);
+  const deleteRecord = useCallback(async (id: string) => {
+    await apiService.deleteRecord(id);
+    await fetchRecords(); // Refetch to remove the deleted record from UI
+  }, [fetchRecords]);
   
   const handleOpenAddModal = () => {
     setEditingRecord(null);
@@ -73,15 +64,18 @@ const App: React.FC = () => {
     setEditingRecord(null);
   };
 
-  const sortedRecords = useMemo(() => {
-    return [...records].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [records]);
-
   return (
     <div className="min-h-screen bg-gray-50 text-gray-800 font-sans">
       <Header onAddRecord={handleOpenAddModal} />
       <main className="p-4 sm:p-6 md:p-8">
-        <Dashboard records={sortedRecords} deleteRecord={deleteRecord} editRecord={handleOpenEditModal} />
+        {isLoading && records.length === 0 ? (
+            <div className="flex justify-center items-center py-20">
+                <Spinner size="lg" />
+                <span className="ml-4 text-gray-600">Loading records...</span>
+            </div>
+        ) : (
+            <Dashboard records={records} deleteRecord={deleteRecord} editRecord={handleOpenEditModal} />
+        )}
       </main>
       {isModalOpen && (
         <AddRecordModal

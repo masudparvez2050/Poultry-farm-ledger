@@ -6,8 +6,8 @@ import { UploadIcon, XMarkIcon } from './Icons';
 
 interface AddRecordModalProps {
   onClose: () => void;
-  onAddRecord: (record: NewRecordData) => void;
-  onUpdateRecord: (record: DeliveryRecord) => void;
+  onAddRecord: (record: NewRecordData) => Promise<void>;
+  onUpdateRecord: (record: DeliveryRecord) => Promise<void>;
   recordToEdit?: DeliveryRecord | null;
 }
 
@@ -22,7 +22,8 @@ export const AddRecordModal: React.FC<AddRecordModalProps> = ({ onClose, onAddRe
   const [buckleWeight, setBuckleWeight] = useState('');
 
 
-  const [isLoading, setIsLoading] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -43,7 +44,7 @@ export const AddRecordModal: React.FC<AddRecordModalProps> = ({ onClose, onAddRe
     const file = event.target.files?.[0];
     if (!file) return;
 
-    setIsLoading(true);
+    setIsScanning(true);
     setError(null);
     setFileName(file.name);
 
@@ -53,14 +54,14 @@ export const AddRecordModal: React.FC<AddRecordModalProps> = ({ onClose, onAddRe
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unknown error occurred.');
     } finally {
-      setIsLoading(false);
+      setIsScanning(false);
       if(fileInputRef.current) {
         fileInputRef.current.value = "";
       }
     }
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!date || !truckId || !invoiceNo || !weightsStr) {
         alert('Please fill in all fields.');
@@ -81,12 +82,24 @@ export const AddRecordModal: React.FC<AddRecordModalProps> = ({ onClose, onAddRe
     const bn = parseInt(buckleNumber, 10) || 0;
     const bw = parseFloat(buckleWeight) || 0;
 
-    if (isEditMode && recordToEdit) {
-      onUpdateRecord({ ...recordToEdit, date, truckId, invoiceNo, weights, buckleNumber: bn, buckleWeight: bw });
-    } else {
-      onAddRecord({ date, truckId, invoiceNo, weights, buckleNumber: bn, buckleWeight: bw });
+    setIsSubmitting(true);
+    setError(null);
+    
+    try {
+      if (isEditMode && recordToEdit) {
+        await onUpdateRecord({ ...recordToEdit, date, truckId, invoiceNo, weights, buckleNumber: bn, buckleWeight: bw });
+      } else {
+        await onAddRecord({ date, truckId, invoiceNo, weights, buckleNumber: bn, buckleWeight: bw });
+      }
+    } catch (apiError) {
+      console.error(apiError);
+      setError('Failed to save the record. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
+
+  const isProcessing = isScanning || isSubmitting;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center z-50 p-4" onClick={onClose}>
@@ -107,63 +120,64 @@ export const AddRecordModal: React.FC<AddRecordModalProps> = ({ onClose, onAddRe
             )}
             
             <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <label htmlFor="date" className="block text-sm font-medium text-gray-700">Date</label>
-                        <input type="date" id="date" value={date} onChange={(e) => setDate(e.target.value)} required className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"/>
-                    </div>
-                    <div>
-                        <label htmlFor="truckId" className="block text-sm font-medium text-gray-700">Truck ID</label>
-                        <input type="text" id="truckId" value={truckId} onChange={(e) => setTruckId(e.target.value)} required placeholder="e.g., GK-114" className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"/>
-                    </div>
-                </div>
-                <div>
-                    <label htmlFor="invoiceNo" className="block text-sm font-medium text-gray-700">Invoice No.</label>
-                    <input type="text" id="invoiceNo" value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} required placeholder="e.g., 151775" className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"/>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <label htmlFor="buckleNumber" className="block text-sm font-medium text-gray-700">Buckle Number</label>
-                        <input type="number" step="1" min="0" id="buckleNumber" value={buckleNumber} onChange={(e) => setBuckleNumber(e.target.value)} placeholder="e.g., 5" className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"/>
-                    </div>
-                    <div>
-                        <label htmlFor="buckleWeight" className="block text-sm font-medium text-gray-700">Buckle Weight (kg)</label>
-                        <input type="number" step="0.1" min="0" id="buckleWeight" value={buckleWeight} onChange={(e) => setBuckleWeight(e.target.value)} placeholder="e.g., 8" className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"/>
-                    </div>
-                </div>
-
-
-                <div>
-                    <label className="block text-sm font-medium text-gray-700">Weights</label>
-                    <div className="mt-2 p-2 border-2 border-dashed border-gray-300 rounded-md">
-                        <div className="flex items-center justify-center space-x-4">
-                           <button type="button" onClick={() => fileInputRef.current?.click()} disabled={isLoading} className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                                <UploadIcon className="w-5 h-5 mr-2" />
-                                {isLoading ? 'Scanning...' : 'Scan from Image'}
-                            </button>
-                            {isLoading && <Spinner size="sm"/>}
+                <fieldset disabled={isProcessing}>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label htmlFor="date" className="block text-sm font-medium text-gray-700">Date</label>
+                            <input type="date" id="date" value={date} onChange={(e) => setDate(e.target.value)} required className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"/>
                         </div>
-                        <input type="file" accept="image/*" ref={fileInputRef} onChange={handleImageUpload} className="hidden" />
-                        {fileName && !isLoading && <p className="text-sm text-gray-500 text-center mt-2">Scanned: {fileName}</p>}
+                        <div>
+                            <label htmlFor="truckId" className="block text-sm font-medium text-gray-700">Truck ID</label>
+                            <input type="text" id="truckId" value={truckId} onChange={(e) => setTruckId(e.target.value)} required placeholder="e.g., GK-114" className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"/>
+                        </div>
+                    </div>
+                    <div>
+                        <label htmlFor="invoiceNo" className="block text-sm font-medium text-gray-700">Invoice No.</label>
+                        <input type="text" id="invoiceNo" value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} required placeholder="e.g., 151775" className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"/>
                     </div>
 
-                    <textarea
-                        id="weights"
-                        rows={6}
-                        value={weightsStr}
-                        onChange={(e) => setWeightsStr(e.target.value)}
-                        required
-                        placeholder="Enter weights separated by space or comma, or scan an image."
-                        className="mt-2 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                    ></textarea>
-                     <p className="mt-1 text-xs text-gray-500">Enter weights separated by spaces or commas. For values from the sheet like '567', enter them as '567'; the app will correctly convert it to 56.7 kg.</p>
-                </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label htmlFor="buckleNumber" className="block text-sm font-medium text-gray-700">Buckle Number</label>
+                            <input type="number" step="1" min="0" id="buckleNumber" value={buckleNumber} onChange={(e) => setBuckleNumber(e.target.value)} placeholder="e.g., 5" className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"/>
+                        </div>
+                        <div>
+                            <label htmlFor="buckleWeight" className="block text-sm font-medium text-gray-700">Buckle Weight (kg)</label>
+                            <input type="number" step="0.1" min="0" id="buckleWeight" value={buckleWeight} onChange={(e) => setBuckleWeight(e.target.value)} placeholder="e.g., 8" className="mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"/>
+                        </div>
+                    </div>
 
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700">Weights</label>
+                        <div className="mt-2 p-2 border-2 border-dashed border-gray-300 rounded-md">
+                            <div className="flex items-center justify-center space-x-4">
+                               <button type="button" onClick={() => fileInputRef.current?.click()} disabled={isScanning} className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                    <UploadIcon className="w-5 h-5 mr-2" />
+                                    {isScanning ? 'Scanning...' : 'Scan from Image'}
+                                </button>
+                                {isScanning && <Spinner size="sm"/>}
+                            </div>
+                            <input type="file" accept="image/*" ref={fileInputRef} onChange={handleImageUpload} className="hidden" />
+                            {fileName && !isScanning && <p className="text-sm text-gray-500 text-center mt-2">Scanned: {fileName}</p>}
+                        </div>
+
+                        <textarea
+                            id="weights"
+                            rows={6}
+                            value={weightsStr}
+                            onChange={(e) => setWeightsStr(e.target.value)}
+                            required
+                            placeholder="Enter weights separated by space or comma, or scan an image."
+                            className="mt-2 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                        ></textarea>
+                         <p className="mt-1 text-xs text-gray-500">Enter weights separated by spaces or commas. For values from the sheet like '567', enter them as '567'; the app will correctly convert it to 56.7 kg.</p>
+                    </div>
+                </fieldset>
                 <div className="flex justify-end space-x-3 pt-4">
-                    <button type="button" onClick={onClose} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">Cancel</button>
-                    <button type="submit" disabled={isLoading} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-blue-300">
-                      {isLoading ? 'Processing...' : (isEditMode ? 'Update Record' : 'Save Record')}
+                    <button type="button" onClick={onClose} disabled={isProcessing} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 disabled:bg-gray-100">Cancel</button>
+                    <button type="submit" disabled={isProcessing} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-blue-300 flex items-center">
+                      {isSubmitting && <Spinner size="sm"/>}<span className="ml-2">{isSubmitting ? 'Saving...' : (isEditMode ? 'Update Record' : 'Save Record')}</span>
                     </button>
                 </div>
             </form>

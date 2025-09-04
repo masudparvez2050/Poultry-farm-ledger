@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 export const PlusIcon: React.FC<{ className?: string }> = ({ className }) => (
@@ -36,3 +35,18 @@ export const XMarkIcon: React.FC<{ className?: string }> = ({ className }) => (
         <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
     </svg>
 );
+
+export const Spinner: React.FC<{ size?: 'sm' | 'md' | 'lg' }> = ({ size = 'md' }) => {
+  const sizeClasses = {
+    sm: 'w-4 h-4',
+    md: 'w-8 h-8',
+    lg: 'w-12 h-12',
+  };
+  return (
+    <div
+      className={`${sizeClasses[size]} animate-spin rounded-full border-4 border-solid border-blue-500 border-t-transparent`}
+      role="status"
+      aria-label="loading"
+    ></div>
+  );
+};
