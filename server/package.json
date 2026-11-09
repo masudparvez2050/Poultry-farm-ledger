@@ -5,9 +5,9 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "dev": "nodemon src/index.js",
-    "start": "node src/index.js",
-    "build": "echo 'Build complete'",
+    "dev": "node init && nodemon src/index.js",
+    "start": "node init && node src/index.js",
+    "build": "node init && echo 'Build complete'",
     "vercel-build": "echo 'Build complete'",
     "migrate": "node scripts/migrate.js"
   },
