@@ -8,10 +8,7 @@ import {
   getRecordsStats,
 } from "../controllers/index.js";
 import {
-import { createRequire } from 'module';
 
-var require = createRequire(import.meta.url);
-var module = { exports: {} };
 
   validateCreateRecord,
   validateUpdateRecord,
